@@ -9,11 +9,12 @@ interface Props {
   type: RolllStateType
   size?: number
   onClick?: () => void
+  clickable?:Boolean
 }
 export const RollStateIcon: React.FC<Props> = (props) => {
-  const { type, size = 20, onClick } = props
+  const { type, size = 20, onClick, clickable = true  } = props
   return (
-    <S.Icon size={size} border={type === "unmark"} bgColor={getBgColor(type)} clickable={Boolean(onClick)} onClick={onClick}>
+    <S.Icon size={size} border={type === "unmark"} bgColor={getBgColor(type)} clickable={clickable} onClick={onClick}>
       <FontAwesomeIcon icon="check" size={size > 14 ? "lg" : "sm"} />
     </S.Icon>
   )
@@ -35,7 +36,7 @@ function getBgColor(type: RolllStateType) {
 }
 
 const S = {
-  Icon: styled.div<{ size: number; border: boolean; bgColor: string; clickable: boolean }>`
+  Icon: styled.div<{ size: number; border: boolean; bgColor: string; clickable: Boolean | undefined }>`
     display: flex;
     justify-content: center;
     align-items: center;

@@ -9,10 +9,54 @@ import { Person } from "shared/models/person"
 import { useApi } from "shared/hooks/use-api"
 import { StudentListTile } from "staff-app/components/student-list-tile/student-list-tile.component"
 import { ActiveRollOverlay, ActiveRollAction } from "staff-app/components/active-roll-overlay/active-roll-overlay.component"
+import { makeStyles } from "@material-ui/core/styles"
+
+import ToggleButton from "staff-app/components/togglebutton/ToggleButton"
+import { nonMutatingSort } from "shared/helpers/sort-data"
+import TextField from "@mui/material/TextField"
+import "./home-board.css"
+import { RolllStateType } from "shared/models/roll"
+import { useStudentState } from "staff-app/Context/StudentProvider"
+import { ItemType } from "staff-app/components/roll-state/roll-state-list.component"
+
+const useStyles = makeStyles(() => ({
+  textField: {
+    width: "90%",
+    marginLeft: "auto",
+    marginRight: "auto",
+    paddingBottom: 0,
+    marginTop: 0,
+    fontWeight: 500,
+  },
+  input: {
+    color: "white",
+  },
+}))
 
 export const HomeBoardPage: React.FC = () => {
   const [isRollMode, setIsRollMode] = useState(false)
   const [getStudents, data, loadState] = useApi<{ students: Person[] }>({ url: "get-homeboard-students" })
+  const [filteredStudents, setFilteredStudents] = useState<Person[] | []>([])
+  const {state, dispatch } = useStudentState()
+  const [list, setList] = useState<{
+    present: number[]
+    absent: number[]
+    late: number[]
+  }>({
+    present: [],
+    absent: [],
+    late: [],
+  })
+
+  useEffect(() => {
+    if (data?.students) {
+      const sorted = nonMutatingSort(data.students, false, "1")
+      dispatch({
+        type: "SET_DATA",
+        data: sorted
+      })
+    }
+  }, [data])
 
   useEffect(() => {
     void getStudents()
@@ -24,16 +68,24 @@ export const HomeBoardPage: React.FC = () => {
     }
   }
 
-  const onActiveRollAction = (action: ActiveRollAction) => {
+  const onActiveRollAction = (action: ActiveRollAction | ItemType) => {
     if (action === "exit") {
       setIsRollMode(false)
     }
   }
 
+  const handleSearch = (e: any) => {
+    dispatch({
+      type: "SEARCH",
+      data:{text: e.target.value}
+    })
+  }
+
+
   return (
     <>
       <S.PageContainer>
-        <Toolbar onItemClick={onToolbarAction} />
+        <Toolbar onItemClick={onToolbarAction}  handleSearch={handleSearch} />
 
         {loadState === "loading" && (
           <CenteredContainer>
@@ -43,7 +95,7 @@ export const HomeBoardPage: React.FC = () => {
 
         {loadState === "loaded" && data?.students && (
           <>
-            {data.students.map((s) => (
+            {state.students.map((s) => (
               <StudentListTile key={s.id} isRollMode={isRollMode} student={s} />
             ))}
           </>
@@ -55,7 +107,10 @@ export const HomeBoardPage: React.FC = () => {
           </CenteredContainer>
         )}
       </S.PageContainer>
-      <ActiveRollOverlay isActive={isRollMode} onItemClick={onActiveRollAction} />
+      <ActiveRollOverlay
+        isActive={isRollMode}
+        onItemClick={onActiveRollAction}
+      />
     </>
   )
 }
@@ -63,13 +118,28 @@ export const HomeBoardPage: React.FC = () => {
 type ToolbarAction = "roll" | "sort"
 interface ToolbarProps {
   onItemClick: (action: ToolbarAction, value?: string) => void
+  handleSearch: (e: any) => void
 }
 const Toolbar: React.FC<ToolbarProps> = (props) => {
   const { onItemClick } = props
+  const classes = useStyles()
+
   return (
     <S.ToolbarContainer>
-      <div onClick={() => onItemClick("sort")}>First Name</div>
-      <div>Search</div>
+      <div onClick={() => onItemClick("sort")}>
+        <ToggleButton />
+      </div>
+      <div>
+        <TextField
+          className={classes.textField}
+          inputProps={{ className: classes.input }}
+          id="filled-search"
+          label="Search"
+          type="search"
+          variant="filled"
+          onChange={props.handleSearch}
+        />
+      </div>
       <S.Button onClick={() => onItemClick("roll")}>Start Roll</S.Button>
     </S.ToolbarContainer>
   )

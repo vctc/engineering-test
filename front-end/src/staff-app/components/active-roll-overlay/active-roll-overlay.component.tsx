@@ -1,17 +1,62 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
 import styled from "styled-components"
 import Button from "@material-ui/core/Button"
 import { BorderRadius, Spacing } from "shared/styles/styles"
-import { RollStateList } from "staff-app/components/roll-state/roll-state-list.component"
+import { ItemType, RollStateList } from "staff-app/components/roll-state/roll-state-list.component"
+import { useStudentState } from "staff-app/Context/StudentProvider"
+import { RollInput, RolllStateType } from "shared/models/roll"
+import { useApi } from "shared/hooks/use-api"
+import { useNavigate } from "react-router-dom"
 
 export type ActiveRollAction = "filter" | "exit"
 interface Props {
   isActive: boolean
-  onItemClick: (action: ActiveRollAction, value?: string) => void
+  onItemClick: (action: ActiveRollAction | ItemType, value?: string) => void
 }
 
 export const ActiveRollOverlay: React.FC<Props> = (props) => {
+  const navigate = useNavigate()
   const { isActive, onItemClick } = props
+  const [present, setPresent] = useState(0)
+  const [absent, setAbsent] = useState(0)
+  const [late, setLate] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [saveRoll, response, loadState] = useApi<{ success: Boolean }>({ url: "save-roll" })
+  const { state } = useStudentState()
+  useEffect(() => {
+    setTotal(state.globalStudent.length)
+    const presentStudents = state.globalStudent.filter((student) => student.rollType == "present")
+    const absentStudents = state.globalStudent.filter((student) => student.rollType == "absent")
+    const lateStudents = state.globalStudent.filter((student) => student.rollType == "late")
+    setPresent(presentStudents.length)
+    setAbsent(absentStudents.length)
+    setLate(lateStudents.length)
+  }, [state])
+
+  const handleComplete = () => {
+    const completeArr = state.globalStudent.map((student) => {
+      if (student.rollType) {
+        return {
+          student_id: student.id,
+          roll_state: student.rollType,
+          student: student
+        }
+      } else {
+        return {
+          student_id: student.id,
+          roll_state: "unmark" as RolllStateType,
+          student: student
+        }
+      }
+    })
+
+    const params: RollInput = {
+      student_roll_states: completeArr,
+    }
+
+    saveRoll(params)
+    navigate("/staff/activity")
+  }
 
   return (
     <S.Overlay isActive={isActive}>
@@ -20,17 +65,17 @@ export const ActiveRollOverlay: React.FC<Props> = (props) => {
         <div>
           <RollStateList
             stateList={[
-              { type: "all", count: 0 },
-              { type: "present", count: 0 },
-              { type: "late", count: 0 },
-              { type: "absent", count: 0 },
+              { type: "all", count: total },
+              { type: "present", count: present },
+              { type: "late", count: late },
+              { type: "absent", count: absent },
             ]}
           />
           <div style={{ marginTop: Spacing.u6 }}>
             <Button color="inherit" onClick={() => onItemClick("exit")}>
               Exit
             </Button>
-            <Button color="inherit" style={{ marginLeft: Spacing.u2 }} onClick={() => onItemClick("exit")}>
+            <Button color="inherit" style={{ marginLeft: Spacing.u2 }} onClick={handleComplete}>
               Complete
             </Button>
           </div>

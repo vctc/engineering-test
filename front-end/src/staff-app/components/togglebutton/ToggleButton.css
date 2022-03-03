@@ -1,0 +1,9 @@
+.MuiOutlinedInput-notchedOutline {
+  display: none;
+}
+.MuiOutlinedInput-input {
+  color: #fff !important;
+}
+.MuiSelect-icon {
+  color: #fff !important;
+}
